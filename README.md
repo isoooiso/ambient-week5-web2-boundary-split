@@ -1,4 +1,4 @@
-# Ambient Week 5 — Web2 Boundary Splitter
+# Ambient Week 5 - Web2 Boundary Splitter
 
 This project implements **Micro-Challenge #5**:
 > Split model output into verifiable vs non-verifiable layers.
