@@ -1,26 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-"""
-Week 5 — Web2 Developer Loop (Micro-Challenge #5)
-
-Goal:
-- Call Ambient API
-- Programmatically split response into:
-  1) deterministic/verifiable (math, explicit logic)
-  2) interpretive/non-verifiable (summaries, advice, speculation)
-  3) unknown/mixed (insufficient explicit structure)
-
-Outputs:
-- week5_web2_report.json
-- week5_web2_summary.md
-
-PowerShell quick start:
-  pip install openai
-  $env:AMBIENT_API_KEY='YOUR_KEY'
-  python ambient_week5_web2.py
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -35,16 +12,13 @@ from typing import Dict, List, Optional, Tuple
 from openai import OpenAI
 
 
-# -----------------------------
-# Data models
-# -----------------------------
 
 @dataclass
 class Segment:
     text: str
-    label: str  # deterministic | interpretive | unknown
+    label: str 
     reasons: List[str]
-    math_check: Optional[str] = None  # "true" | "false" | None
+    math_check: Optional[str] = None
 
 
 @dataclass
@@ -56,10 +30,6 @@ class PromptResult:
     unknown: List[Segment]
     counts: Dict[str, int]
 
-
-# -----------------------------
-# Heuristic dictionaries
-# -----------------------------
 
 INTERPRETIVE_WORDS = {
     "likely", "possibly", "maybe", "might", "could", "suggests", "appears",
@@ -75,16 +45,12 @@ FORMAL_LOGIC_MARKERS = {
 }
 
 SYSTEM_NOISE_PATTERNS = [
-    r"^#{1,6}\s+",          # markdown headings
-    r"^[-*_]{3,}$",         # separators
-    r"^```.*$",             # code fences
-    r"^\*\s+",              # bullet start
+    r"^#{1,6}\s+",
+    r"^[-*_]{3,}$",
+    r"^```.*$",
+    r"^\*\s+",
 ]
 
-
-# -----------------------------
-# Text cleaning / segmentation
-# -----------------------------
 
 def preprocess_text(text: str) -> str:
     lines: List[str] = []
@@ -101,7 +67,6 @@ def preprocess_text(text: str) -> str:
         if skip:
             continue
 
-        # Remove leading bullet marker if present
         line = re.sub(r"^\*\s+", "", line)
         lines.append(line)
 
@@ -118,15 +83,10 @@ def split_sentences(text: str) -> List[str]:
     if not cleaned:
         return []
 
-    # Split at punctuation + whitespace + probable next sentence start
     parts = re.split(r'(?<=[.!?])\s+(?=[A-Z(\[])', cleaned)
     segments = [p.strip() for p in parts if len(p.strip()) >= 4]
     return segments
 
-
-# -----------------------------
-# Deterministic checks
-# -----------------------------
 
 def check_binary_equation(sentence: str) -> Optional[bool]:
     """
@@ -184,11 +144,9 @@ def has_formal_logic_structure(sentence: str) -> bool:
     s = sentence.lower()
     marker_hits = sum(1 for m in FORMAL_LOGIC_MARKERS if m in s)
 
-    # Require at least two logic signals to reduce false positives
     if marker_hits >= 2:
         return True
 
-    # Explicit "if ... then ..."
     if re.search(r"\bif\b.+\bthen\b", s):
         return True
 
@@ -199,10 +157,6 @@ def has_interpretive_language(sentence: str) -> bool:
     s = sentence.lower()
     return any(w in s for w in INTERPRETIVE_WORDS)
 
-
-# -----------------------------
-# Classification
-# -----------------------------
 
 def classify_segment(sentence: str) -> Segment:
     reasons: List[str] = []
@@ -222,7 +176,6 @@ def classify_segment(sentence: str) -> Segment:
     logic_ok = has_formal_logic_structure(sentence)
     interpretive = has_interpretive_language(sentence)
 
-    # Priority: explicit verifiable structure first
     if has_math_verified:
         return Segment(
             text=sentence,
@@ -275,10 +228,6 @@ def classify_response(response: str) -> Tuple[List[Segment], List[Segment], List
     return deterministic, interpretive, unknown
 
 
-# -----------------------------
-# Ambient API call
-# -----------------------------
-
 def call_ambient(
     client: OpenAI,
     model: str,
@@ -321,10 +270,6 @@ def call_ambient(
 
     raise RuntimeError(f"Ambient API call failed after retries: {last_error}") from last_error
 
-
-# -----------------------------
-# Reporting
-# -----------------------------
 
 def to_prompt_result(prompt: str, response: str) -> PromptResult:
     d, i, u = classify_response(response)
@@ -423,10 +368,6 @@ def save_markdown_summary(path: str, model: str, results: List[PromptResult]) ->
         f.write("\n".join(lines))
 
 
-# -----------------------------
-# CLI / main
-# -----------------------------
-
 DEFAULT_PROMPTS = [
     "In a ledger: treasury is 2500, tax is 8%, then split equally among 3 guilds. "
     "A report claims each gets 850 and therefore Guild A is corrupt. Evaluate.",
@@ -512,3 +453,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
